@@ -40,6 +40,10 @@ export default class Mechanics
         this.forces.push(...Forces.linearForce(this.body(body), point, this.staticPointFunction(staticPoint), staticVector, this.forceFactor))
     }
 
+    arcBindingForce = (body1, point1, body2, arcCenter, arcPoint1, arcPoint2) => {
+        this.forces.push(...Forces.arcBindingForce(this.body(body1), point1, this.body(body2), arcCenter, arcPoint1, arcPoint2))
+    }
+
     namedPoint = (name, ...argList) => {
         if (argList.length > 0) {
             this.namedPoints[name] = Point.create(...argList)
