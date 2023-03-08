@@ -1,1 +1,3 @@
-console.log("mech2d loaded")
+import Mechanics from "./mechanics.js"
+
+export {Mechanics}

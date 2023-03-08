@@ -1,4 +1,7 @@
 #!/usr/bin/node
 
-import "./src/mech2d.js";
+import {Mechanics} from "./src/mech2d.js";
+import {Point, Vector, Angle} from "eeg2d"
 
+
+var mechanics = new Mechanics()
