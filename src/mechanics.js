@@ -1,17 +1,5 @@
 import Body from "./body.js"
-
-const createPointFunction = (body, point) => {
-    const invariant = body.pointToInvariant(point)
-    return () => body.invariantToPoint(invariant)
-}
-
-const createStaticPointFunction = (mechanics, staticPoint) => {
-    if (typeof staticPoint === 'string' || staticPoint instanceof String) {
-        return () => mechanics.namedPoint(staticPoint)
-    } else {
-        return () => staticPoint
-    }
-}
+import Forces from "./forces.js"
 
 export default class Mechanics
 {
@@ -41,19 +29,15 @@ export default class Mechanics
     }
 
     bindingForce = (body1, point1, body2, point2) => {
-        body1 = this.body(body1)
-        body2 = this.body(body2)
-        const point1Function = createPointFucntion(body1, point1)
-        const point2Function = createPointFucntion(body2, point2)
-        this.forces.push(new Force(body1, point1Function, point2Function, this.forceFactor))
-        this.forces.push(new Force(body2, point2Function, point1Function, this.forceFactor))
+        this.forces.push(...Forces.bindingForce(this.body(body1), point1, this.body(body2), point2, this.forceFactor))
     }
 
     staticForce = (body, point, staticPoint) => {
-        body = this.body(body)
-        const pointFunction = createPointFunction(body, point)
-        const staticPointFunction = createStaticPointFunction(this, staticPoint)
-        this.forces.push(new Force(body, pointFucntion, staticPointFunction, this.forceFactor))
+        this.forces.push(...Forces.staticForce(this.body(body), point, this.staticPointFunction(staticPoint), this.forceFactor))
+    }
+
+    linearForce = (body, point, staticPoint, staticVector) => {
+        this.forces.push(...Forces.linearForce(this.body(body), point, this.staticPointFunction(staticPoint), staticVector, this.forceFactor))
     }
 
     namedPoint = (name, ...argList) => {
@@ -65,6 +49,15 @@ export default class Mechanics
                 throw `named point of name $name does not exist`
             }
             return this.namedPoints[name]
+        }
+    }
+
+    staticPointFunction = (point) => {
+        if (typeof staticPoint === 'string' || staticPoint instanceof String) {
+            const mechanics = this
+            return () => mechanics.namedPoint(staticPoint)
+        } else {
+            return () => staticPoint
         }
     }
 

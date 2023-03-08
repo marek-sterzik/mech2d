@@ -1,17 +1,15 @@
 export default class Force
 {
-    constructor(body, bodyPoint, staticPoint, forceFactor)
+    constructor(body, bodyPoint, forceVector)
     {
         this.body = body
         this.bodyPoint = bodyPoint
-        this.staticPoint = staticPoint
-        this.forceFactor = forceFactor
+        this.forceVector = forceVector
     }
 
     apply = (tQuantum) => {
         const bodyPoint = this.bodyPoint()
-        const staticPoint = this.staticPoint()
-        const force = bodyPoint.vectorTo(staticPoint).mul(this.forceFactor)
+        const force = this.forceVector()
         this.body.applyForce(force, bodyPoint, tQuantum)
         return force.size()
     }
