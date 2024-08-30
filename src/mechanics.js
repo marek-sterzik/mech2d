@@ -1,5 +1,4 @@
 import Body from "./body.js"
-import Forces from "./forces.js"
 
 export default class Mechanics
 {

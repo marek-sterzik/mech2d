@@ -13,9 +13,9 @@
     "@babel/cli": "^7.10.1",
     "@babel/core": "^7.10.2",
     "@babel/preset-env": "^7.10.2",
-    "mocha": "^8.0.1",
-    "webpack": "^4.43.0",
-    "webpack-cli": "^3.3.11"
+    "mocha": "^10.7.3",
+    "webpack": "^5.94.0",
+    "webpack-cli": "^5.1.4"
   },
   "author": {
     "name": "Marek Sterzik",
@@ -28,5 +28,5 @@
   "main": "src/mech2d.js",
   "type": "module",
   "license": "MIT",
-  "version": "0.0.1"
+  "version": "0.0.2"
 }
