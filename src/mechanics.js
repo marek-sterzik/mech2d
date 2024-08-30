@@ -7,87 +7,57 @@ export default class Mechanics
     {
         this.frictionCoeficient = 1
         this.tQuantum = 0.01
-        this.forceFactor = 1
+        this.elasticityFactor = 1
+        this.frictionFactor = 1
+        this.maxVelocityAllowed = 0.0001
+        this.maxAngularVelocityAllowed = 0.0001
+        this.maxIterations = 1000
         this.bodies = {}
-        this.forces = []
-        this.namedPoints = {}
+        this.recalcSpeeds()
     }
 
-    body = (name, ...argList) => {
-        if (argList.length > 0) {
-            if (name in this.bodies) {
-                throw `body of name $name already exists`
+    addBody = (body) => {
+        this.bodies[body.getId()] = body
+        this.recalcSpeeds()
+        return this
+    }
+
+    removeBody = (body) => {
+        delete this.bodies[body.getId()]
+    }
+
+    solve = () => {
+        var iterations = 0
+        while (this.maxVelocity > this.maxVelocityAllowed || this.maxAngularVelocity > this.maxAngularVelocityAllowed) {
+            if (this.maxIterations !== null && this.maxIterations !== undefined && iterations >= this.maxIterations) {
+                throw "maximum iterations reached"
             }
-            this.bodies[name] = new Body(...argList)
-            return this
-        } else {
-            if (!(name in this.bodies)) {
-                throw `body of name $name does not exist`
-            }
-            return this.bodies[name]
+            iterations++
+            this.iteration()
         }
     }
 
-    bindingForce = (body1, point1, body2, point2) => {
-        this.forces.push(...Forces.bindingForce(this.body(body1), point1, this.body(body2), point2, this.forceFactor))
-    }
-
-    staticForce = (body, point, staticPoint) => {
-        this.forces.push(...Forces.staticForce(this.body(body), point, this.staticPointFunction(staticPoint), this.forceFactor))
-    }
-
-    linearForce = (body, point, staticPoint, staticVector) => {
-        this.forces.push(...Forces.linearForce(this.body(body), point, this.staticPointFunction(staticPoint), staticVector, this.forceFactor))
-    }
-
-    arcBindingForce = (body1, point1, body2, arcCenter, arcPoint1, arcPoint2) => {
-        this.forces.push(...Forces.arcBindingForce(this.body(body1), point1, this.body(body2), arcCenter, arcPoint1, arcPoint2))
-    }
-
-    namedPoint = (name, ...argList) => {
-        if (argList.length > 0) {
-            this.namedPoints[name] = Point.create(...argList)
-            return this
-        } else {
-            if (!(name in this.namedPoints)) {
-                throw `named point of name $name does not exist`
-            }
-            return this.namedPoints[name]
+    iteration = () => {
+        for (var id in this.bodies) {
+            var body = this.bodies[id]
+            var force = body.getAllLinksForce(this.elasticityFactor)
+            body.applyFriction(this.frictionFactor, this.tQuantum)
+            body.applyForce(force, this.tQuantum)
         }
-    }
-
-    staticPointFunction = (point) => {
-        if (typeof staticPoint === 'string' || staticPoint instanceof String) {
-            const mechanics = this
-            return () => mechanics.namedPoint(staticPoint)
-        } else {
-            return () => staticPoint
-        }
-    }
-
-    applyFriction = () => {
-        for (var body of this.bodies) {
-            body.applyFriction(this.frictionCoeficient, this.tQuantum)
-        }
-    }
-
-    applyForces = () => {
-        var maxForce = 0
-        for (var force of this.forces) {
-            maxForce = Math.max(maxForce, force.apply(this.tQuantum))
-        }
-        return maxForce
-    }
-
-    doMoves = () => {
-        for (var body of this.bodies) {
+        for (var id in this.bodies) {
+            var body = this.bodies[id]
             body.move(this.tQuantum)
         }
+        this.recalcSpeeds()
     }
 
-    step = () => {
-        this.applyFriction()
-        this.applyForces()
-        this.doMoves()
+    recalcSpeeds = () => {
+        this.maxVelocity = 0
+        this.maxAngularVelocity = 0
+        for (var id in this.bodies) {
+            var body = this.bodies[id]
+            this.maxVelocity = Math.max(this.maxVelocity, body.velocity.size())
+            this.maxAngularVelocity = Math.max(this.maxAngularVelocity, body.angularVelocity.rad())
+        }
     }
 }

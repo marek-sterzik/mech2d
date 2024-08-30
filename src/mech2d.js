@@ -1,3 +1,4 @@
 import Mechanics from "./mechanics.js"
+import Body from "./body.js"
 
-export {Mechanics}
+export {Mechanics, Body}

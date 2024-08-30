@@ -7,7 +7,7 @@
     "mechanics of bodies"
   ],
   "dependencies": {
-    "eeg2d": "^0.1.0"
+    "eeg2d": "^0.2.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.10.1",
