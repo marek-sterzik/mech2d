@@ -39,7 +39,7 @@ export default class Mechanics
             iterations++
             this.iteration()
         }
-        return interations
+        return iterations
     }
 
     iteration = () => {

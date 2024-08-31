@@ -28,5 +28,5 @@
   "main": "src/mech2d.js",
   "type": "module",
   "license": "MIT",
-  "version": "0.0.3"
+  "version": "0.0.4"
 }
