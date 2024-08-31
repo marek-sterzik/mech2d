@@ -132,7 +132,7 @@ export default class Body
     applyForce = (force, tQuantum) => {
         var deltaVelocity = force.mul(tQuantum/this.angularMomentum, tQuantum/this.mass)
         this.velocity = this.velocity.add(deltaVelocity.vector)
-        this.angularVelocity = this.angularVelocity.add(Angle.rad(deltaVeloctiy.momentum))
+        this.angularVelocity = this.angularVelocity.add(Angle.rad(deltaVelocity.momentum))
         return this
     }
 }

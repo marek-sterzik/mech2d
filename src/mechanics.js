@@ -11,6 +11,7 @@ export default class Mechanics
         this.maxVelocityAllowed = 0.0001
         this.maxAngularVelocityAllowed = 0.0001
         this.maxIterations = 1000
+        this.initialIterations = 1
         this.bodies = {}
         this.recalcSpeeds()
     }
@@ -27,6 +28,10 @@ export default class Mechanics
 
     solve = () => {
         var iterations = 0
+        for (var i = 0; i < this.initialIterations; i++) {
+            iterations++
+            this.iteration()
+        }
         while (this.maxVelocity > this.maxVelocityAllowed || this.maxAngularVelocity > this.maxAngularVelocityAllowed) {
             if (this.maxIterations !== null && this.maxIterations !== undefined && iterations >= this.maxIterations) {
                 throw "maximum iterations reached"
@@ -34,6 +39,7 @@ export default class Mechanics
             iterations++
             this.iteration()
         }
+        return interations
     }
 
     iteration = () => {
