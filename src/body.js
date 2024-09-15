@@ -1,40 +1,20 @@
 import {Point, Vector, Angle, Transformation} from "eeg2d"
 import BodyLink from "./link.js"
-import Momentum from "./momentum.js"
-
-
-const getForceMyCoords = (forceVector, forcePoint) => {
-    const massCenter = Point.origin()
-    var excentricVector = massCenter.vectorTo(forcePoint)
-    const forceRadius = excentricVector.size()
-    excentricVector = excentricVector.normalize()
-    const tangentialVector = excentricVector.rot(Angle.right())
-    const tangentialForceMomentum = tangentialVector.mul(forceVector) * forceRadius
-    const excentricForce = excentricVector.mul(excentricVector.mul(forceVector))
-    return new Momentum(tangentialForceMomentum, forceVector)
-}
-
-class UniversalPseudoBody
-{
-    universalToBodyCoords = (vectorOrPoint) => vectorOrPoint
-    bodyToUniversalCoords = (vectorOrPoint) => vectorOrPoint
-}
-
-const universalPseudoBody = new UniversalPseudoBody()
 
 var uniqueBodyId = 1
+var maxStableTrackDelta = 0.0001
+var maxStableAngularTrackDeltaRad = 0.0001
+
 
 export default class Body
 {
-    constructor(massCenter, mass = 1, angularMomentum = 1)
+    constructor(massCenter)
     {
         this.id = uniqueBodyId++
-        this.mass = mass
-        this.angularMomentum = angularMomentum
         this.track = Point.origin().vectorTo(Point.create(massCenter))
-        this.velocity = Vector.zero()
         this.angularTrack = Angle.zero()
-        this.angularVelocity = Angle.zero()
+        this.trackDelta = Vector.zero()
+        this.angularDelta = Angle.zero()
         this.links = {}
         this.updateCurrentTransformation()
     }
@@ -49,26 +29,25 @@ export default class Body
     universalToBodyCoords = (vectorOrPoint) => this.currentInverseTransformation.transform(vectorOrPoint)
     bodyToUniversalCoords = (vectorOrPoint) => this.currentTransformation.transform(vectorOrPoint)
 
-    link = (body2, point, point2 = undefined) => {
-        if (point2 === undefined  || point2 === null) {
-            point2 = point
+    link = (point, point2, factor = 0.5) => {
+        if ((point2 instanceof Point) || (point2 instanceof Vector)) {
+            const pt2 = point2
+            point2 = () => pt2
+        }
+        if (typeof point2 !== "function") {
+            throw "Invalid argument point2 of the linked point"
+        }
+        if (typeof factor === 'number' && isFinite(factor)) {
+            const f = factor
+            factor = () => f
+        }
+        if (typeof factor !== "function") {
+            throw "Invalid argument factor of the linked point"
         }
 
-        if (body2 === undefined || body2 === null) {
-            body2 = universalPseudoBody
-        }
-        if (point instanceof Point) {
-            point = this.universalToBodyCoords(point)
-        }
-        if (point2 instanceof Point) {
-            point2 = body2.universalToBodyCoords(point2)
-        }
-        const link = new BodyLink(this, point, body2, point2)
+        const link = new BodyLink(this, this.universalToBodyCoords(point), point2, factor)
         const linkId = link.getId()
         this.links[linkId] = link
-        if (!(body2 instanceof UniversalPseudoBody)) {
-            body2.links[linkId] = link
-        }
         return link
     }
 
@@ -77,62 +56,56 @@ export default class Body
         if (id in this.links) {
             delete this.links[id]
         }
-        const oppositeBody = link.getOppositeBody(this)
-        if (!(oppositeBody instanceof UniversalPseudoBody)) {
-            delete oppositeBody.links[id]
-        }
         return this
     }
 
-    move = (tQuantum) => {
-        this.track = this.track.add(this.velocity.mul(tQuantum))
-        this.angularTrack = this.angularTrack.add(this.angularVelocity.mul(tQuantum))
+    getPoint(point)
+    {
+        const pt = this.universalToBodyCoords(point)
+        return () => this.bodyToUniversalCoords(pt)
+    }
+
+    stable = () => {
+        return this.trackDelta.size() < maxStableTrackDelta && Math.abs(this.angularDelta.rad()) < maxStableAngularTrackDeltaRad
+    }
+
+    commitMove = () => {
+        const stable = this.stable()
+        this.track = this.track.add(this.trackDelta)
+        this.angularTrack = this.angularTrack.add(this.angularDelta).normalize()
+        this.trackDelta = Vector.zero()
+        this.angularDelta = Angle.zero()
         this.updateCurrentTransformation()
-        return this
+        return stable
     }
 
-    applyFriction = (frictionFactor, tQuantum) => {
-        const multiplier = Math.exp(-frictionFactor * tQuantum)
-        this.velocity = this.velocity.mul(multiplier)
-        this.angularVelocity = this.angularVelocity.mul(multiplier)
-        return this
-    }
-
-    getForce = (forceVector, forcePoint) => {
-        return getForceMyCoords(this.universalToBodyCoords(forceVector), this.universalToBodyCoords(forcePoint))
-    }
-
-    getLinkForce = (link, elasticityFactor = 1) => {
-        const id = link.getId()
-        if (!(id in this.links)) {
-            return Momentum.zero()
-        }
-        const forcePoint = link.getMyPoint(this)
-        const oppositePoint = link.getOppositePointInMyCoords(this)
-        return getForceMyCoords(forcePoint.vectorTo(oppositePoint).mul(elasticityFactor), forcePoint)
-    }
-
-    getAllLinksForce = (elasticityFactor = 1) => {
-        var force = null
+    move = (commit = true) => {
+        var trackDelta = Vector.zero()
+        var angularDelta = Angle.zero()
+        var n = 0
         for (var linkId in this.links) {
             var link = this.links[linkId]
-            var currentForce = this.getLinkForce(link, elasticityFactor)
-            if (force === null) {
-                force = currentForce
+            n++
+            const point = link.getMovementPoint()
+            const vector = link.getMovementVector()
+            const radiusVector = Point.origin().vectorTo(point)
+            if (!radiusVector.isZero()) {
+                const radius = radiusVector.size()
+                const radiusNorm = radiusVector.mul(1/radius)
+                const tangent = radiusNorm.rot(Angle.right())
+                const angle = Angle.rad(Math.max(-1, Math.min(1, tangent.mul(vector)/radius)))
+                angularDelta = angularDelta.add(angle)
+                trackDelta = trackDelta.add(radiusNorm.mul(vector.mul(radiusNorm)))
             } else {
-                force = force.add(currentForce)
+                trackDelta = trackDelta.add(vector)
             }
         }
-        if (force === null) {
-            force = Momentum.zero()
+        this.trackDelta = this.trackDelta.add(trackDelta.mul(1/n))
+        this.angularDelta = this.angularDelta.add(angularDelta.mul(1/n))
+        if (commit) {
+            return this.commitMove()
+        } else {
+            return this.stable()
         }
-        return force
-    }
-
-    applyForce = (force, tQuantum) => {
-        var deltaVelocity = force.mul(tQuantum/this.angularMomentum, tQuantum/this.mass)
-        this.velocity = this.velocity.add(deltaVelocity.vector)
-        this.angularVelocity = this.angularVelocity.add(Angle.rad(deltaVelocity.momentum))
-        return this
     }
 }
