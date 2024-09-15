@@ -95,12 +95,10 @@ export default class Body
                 const tangent = radiusNorm.rot(Angle.right())
                 const angle = Angle.rad(Math.max(-1, Math.min(1, tangent.mul(vector)/radius)))
                 angularDelta = angularDelta.add(angle)
-                trackDelta = trackDelta.add(radiusNorm.mul(vector.mul(radiusNorm)))
-            } else {
-                trackDelta = trackDelta.add(vector)
             }
+            trackDelta = trackDelta.add(vector)
         }
-        this.trackDelta = this.trackDelta.add(trackDelta.mul(1/n))
+        this.trackDelta = this.bodyToUniversalCoords(this.trackDelta.add(trackDelta.mul(1/n)))
         this.angularDelta = this.angularDelta.add(angularDelta.mul(1/n))
         if (commit) {
             return this.commitMove()

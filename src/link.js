@@ -33,7 +33,6 @@ export default class BodyLink
         if (target instanceof Point) {
             target = this.point.vectorTo(target)
         }
-        console.log("factor", factor)
         target = target.mul(factor)
         return target
     }
